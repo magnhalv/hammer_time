@@ -8,17 +8,18 @@ use crate::{
 
 const MAX_ACCELERATION: f32 = 25.0;
 const MAX_VELOCITY: f32 = 10.0;
-const MAX_JUMP_ACCELERATION: f32 = 20.0;
+const MAX_JUMP_ACCELERATION: f32 = 8.0;
 
 #[system]
 #[write_component(Velocity)]
+#[read_component(Point)]
 pub fn player_input(ecs: &mut SubWorld, #[resource] frame_input: &FrameInput) {
     let controller = frame_input.controller;
     let dt = frame_input.dt;
-    let mut players = <(Entity, &mut Velocity)>::query().filter(component::<Player>());
-    players.iter_mut(ecs).for_each(|(_, velocity)| {
+    let mut players = <(Entity, &mut Velocity, &Point)>::query().filter(component::<Player>());
+    players.iter_mut(ecs).for_each(|(_, velocity, point)| {
         velocity.vel_x = velocity.vel_x + (controller.x * MAX_ACCELERATION * dt);
-
+        println!("{}", velocity.vel_x);
         let direction = if velocity.vel_x > 0.0 {
             1.0
         }
@@ -41,8 +42,8 @@ pub fn player_input(ecs: &mut SubWorld, #[resource] frame_input: &FrameInput) {
             
         }
 
-        if controller.y < 0.0 {
-            velocity.vel_y = f32::max(velocity.vel_y - (MAX_JUMP_ACCELERATION), -MAX_VELOCITY);
+        if controller.btn_a && point.y >= (SCREEN_HEIGHT - PLAYER_HEIGHT - 5) as f32  {
+            velocity.vel_y = -MAX_JUMP_ACCELERATION;
         }
 
     });

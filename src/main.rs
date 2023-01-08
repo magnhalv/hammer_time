@@ -1,7 +1,7 @@
 extern crate sdl2;
 
 use legion::*;
-use sdl2::controller::Axis;
+use sdl2::controller::{Axis, Button};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -127,18 +127,21 @@ pub fn main() {
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut state = GameState::new();
+    let mut state = GameState::new();    
+
+    let mut frame_duration: Duration;
+    let mut dt = 0.0;    
+    
     let mut controller = Controller {
         x: 0.0,
         y: 0.0,
         dx: 0.0,
         dy: 0.0,
-    };
-
-    let mut frame_duration: Duration;
-    let mut dt = 0.0;
-    
+        btn_a: false
+    };    
     'running: loop {
+        controller.btn_a = false;
+
         let start_frame_time = SystemTime::now();
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
@@ -157,17 +160,18 @@ pub fn main() {
                     axis: Axis::LeftX,
                     value: val,
                     ..
-                } => {
-                    controller.dx = controller.x - (val as f32);
+                } => {                    
                     controller.x = process_input_stick_value(val, CONTROLLER_DEAD_ZONE);
                 }
                 Event::ControllerAxisMotion {
                     axis: Axis::LeftY,
                     value: val,
                     ..
-                } => {
-                    controller.dy = controller.y - (val as f32);
+                } => {                    
                     controller.y = process_input_stick_value(val, CONTROLLER_DEAD_ZONE);
+                },
+                Event::ControllerButtonDown { button: btn, .. } => {
+                    controller.btn_a = btn == Button::A;
                 }
 
                 _ => {}
@@ -192,8 +196,7 @@ pub fn main() {
         if max_frame_duration > frame_duration.as_nanos() {
             let sleep_duration = (max_frame_duration - frame_duration.as_nanos()) as u32;            
             ::std::thread::sleep(Duration::new(0, sleep_duration));
-            dt = 1.0 / 60.0;
-            println!("Sleeping {} ns!", {dt});            
+            dt = 1.0 / 60.0;            
         }
         else {
             dt = frame_duration.as_secs_f32();
