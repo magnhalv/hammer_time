@@ -6,16 +6,18 @@ use crate::{
     resources::Controller, prelude::*,
 };
 
-const MAX_ACCELERATION: f32 = 1.0;
-const MAX_VELOCITY: f32 = 5.0;
-const MAX_JUMP_ACCELERATION: f32 = 3.0;
+const MAX_ACCELERATION: f32 = 25.0;
+const MAX_VELOCITY: f32 = 10.0;
+const MAX_JUMP_ACCELERATION: f32 = 20.0;
 
 #[system]
 #[write_component(Velocity)]
-pub fn player_input(ecs: &mut SubWorld, #[resource] controller: &Controller) {
+pub fn player_input(ecs: &mut SubWorld, #[resource] frame_input: &FrameInput) {
+    let controller = frame_input.controller;
+    let dt = frame_input.dt;
     let mut players = <(Entity, &mut Velocity)>::query().filter(component::<Player>());
     players.iter_mut(ecs).for_each(|(_, velocity)| {
-        velocity.vel_x = velocity.vel_x + controller.x * MAX_ACCELERATION;
+        velocity.vel_x = velocity.vel_x + (controller.x * MAX_ACCELERATION * dt);
 
         let direction = if velocity.vel_x > 0.0 {
             1.0
@@ -31,16 +33,16 @@ pub fn player_input(ecs: &mut SubWorld, #[resource] controller: &Controller) {
         
         if controller.x == 0.0 {
             if velocity.vel_x > 0.0 {
-                velocity.vel_x = f32::max(0.0, velocity.vel_x - MAX_ACCELERATION);
+                velocity.vel_x = f32::max(0.0, velocity.vel_x - (MAX_ACCELERATION * dt));
             }
             else {
-                velocity.vel_x = f32::min(0.0, velocity.vel_x + MAX_ACCELERATION);
+                velocity.vel_x = f32::min(0.0, velocity.vel_x + (MAX_ACCELERATION * dt));
             }
             
         }
 
         if controller.y < 0.0 {
-            velocity.vel_y = f32::max(velocity.vel_y - MAX_JUMP_ACCELERATION, -MAX_VELOCITY);
+            velocity.vel_y = f32::max(velocity.vel_y - (MAX_JUMP_ACCELERATION), -MAX_VELOCITY);
         }
 
     });

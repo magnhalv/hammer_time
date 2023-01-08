@@ -6,7 +6,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 mod components;
 mod resources;
@@ -51,14 +51,11 @@ impl GameState {
     }
 }
 
-fn update(state: &mut GameState, controller: &Controller) {
-    let c = Controller {
-        x: controller.x,
-        y: controller.y,
-        dx: 0.0,
-        dy: 0.0
-    };
-    state.resources.insert(c);
+fn update(state: &mut GameState, controller: &Controller, dt: f32) {
+    state.resources.insert(FrameInput {
+        controller: controller.clone(),
+        dt
+    });
 
     state
         .player_systems
@@ -138,9 +135,11 @@ pub fn main() {
         dy: 0.0,
     };
 
-    let mut dt = 0;
-    let last_frame_time 
+    let mut frame_duration: Duration;
+    let mut dt = 0.0;
+    
     'running: loop {
+        let start_frame_time = SystemTime::now();
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
@@ -175,7 +174,7 @@ pub fn main() {
             }
         }                
 
-        update(&mut state, &controller);        
+        update(&mut state, &controller, dt);        
         // The rest of the game loop goes here...
         let player = state.ecs.entry(state.player_id).unwrap();        
         let point = player.get_component::<Point>().unwrap();
@@ -183,6 +182,23 @@ pub fn main() {
 
         canvas.fill_rect(Rect::new(point.x as i32, point.y as i32, PLAYER_WIDTH, PLAYER_HEIGHT)).unwrap();
         canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+
+        let end_frame_time = SystemTime::now();
+        frame_duration = end_frame_time.duration_since(start_frame_time).unwrap();        
+        
+        let max_frame_duration = 1_000_000_000u128 / 60;
+
+        if max_frame_duration > frame_duration.as_nanos() {
+            let sleep_duration = (max_frame_duration - frame_duration.as_nanos()) as u32;            
+            ::std::thread::sleep(Duration::new(0, sleep_duration));
+            dt = 1.0 / 60.0;
+            println!("Sleeping {} ns!", {dt});            
+        }
+        else {
+            dt = frame_duration.as_secs_f32();
+            println!("WARNING: Exceeded max frame duration!")
+        }
+        
     }
 }
